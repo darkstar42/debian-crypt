@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# This script generates two scripts in the initramfs output,
+# /root/mount_cryptroot.sh and /root/.profile
+#
+# Source: 
+# https://projectgus.com/2013/05/encrypted-rootfs-over-ssh-with-debian-wheezy/
+
+
+ALLOW_SHELL=0
+# Set this to 1 before running update-initramfs if you want
+# to allow authorized users to type Ctrl-C to drop to a
+# root shell (useful for debugging, potential for abuse.)
+#
+# (Note that even with ALLOW_SHELL=0 it may still be possible
+# to achieve a root shell.)
+#
+
+if [ -z ${DESTDIR} ]; then
+    exit
+fi
+
+SCRIPT="${DESTDIR}/root/mount_cryptroot.sh"
+cat > "${SCRIPT}" << 'EOF'
+#!/bin/sh
+/sbin/cryptsetup luksOpen /dev/md1 raid
+RESULT=$?
+while [ $RESULT > 0 ]; do
+    if [ $RESULT -eq 5 ]; then
+        break
+    fi
+
+    /sbin/cryptsetup luksOpen /dev/md1 raid
+    RESULT=$?
+    sleep 0.1
+done
+
+while [ -n "`pidof askpass cryptsetup`" ]; do
+    $CMD && kill -9 `pidof askpass cryptsetup` && echo "Success"
+done
+EOF
+
+chmod +x "${SCRIPT}"
+
+# Run mount_cryptroot by default and close the login session afterwards
+# If ALLOW_SHELL is set to 1, you can press Ctrl-C to get to an interactive prompt
+cat > "${DESTDIR}/root/.profile" << EOF
+ctrl_c_exit() {
+  exit 1
+}
+ctrl_c_shell() {
+  # Ctrl-C during .profile appears to mangle terminal settings
+  reset
+}
+if [ "$ALLOW_SHELL" == "1" ]; then
+  echo "Unlocking rootfs... Type Ctrl-C for a shell."
+  trap ctrl_c_shell INT
+else
+  echo "Unlocking rootfs..."
+  trap ctrl_c_exit INT
+fi
+/root/mount_cryptroot.sh && exit 1 || echo "Run ./mount_cryptroot.sh to try unlocking again"
+trap INT
+EOF

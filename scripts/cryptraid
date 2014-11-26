@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Source: http://forums.debian.net/viewtopic.php?f=5&t=74232#p506229
+
+PREREQ="mdadm"
+prereqs()
+{
+     echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+     prereqs
+     exit 0
+     ;;
+esac
+
+cryptsetup luksOpen /dev/md1 raid
+lvm vgscan
+lvm vgchange -ay
+
