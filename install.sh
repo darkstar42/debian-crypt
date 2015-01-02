@@ -139,7 +139,6 @@ cp ./scripts/mount_cryptroot /mnt/debian/etc/initramfs-tools/hooks/mount_cryptro
 mkdir -p /mnt/debian/etc/initramfs-tools/scripts/local-top/
 cp ./scripts/cryptraid /mnt/debian/etc/initramfs-tools/scripts/local-top/cryptraid
 cp $SSH_PUBKEY /mnt/debian/root/id_rsa.pub
-cp debian.cfg /mnt/debian/root/debian.cfg
 
 cat << EOF > /mnt/debian/setup.sh
 echo "
